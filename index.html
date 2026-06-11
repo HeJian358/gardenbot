@@ -565,7 +565,7 @@ function RobotTab(props){
     e('div',{className:'gap'},
       e('button',{style:{flex:1},onClick:function(){
         if(mode==='simulator'||mode==='offline'){flash('No real robot needed in this mode');return;}
-        fetch(endpoint+'/api/ping',{signal:AbortSignal.timeout(3000)}).then(function(r){flash(r.ok?'Robot responded OK':'Robot returned error');}).catch(function(){flash('Cannot reach robot.',false);});
+        fetch(endpoint+'/api/ping',{signal:AbortSignal.timeout(3000)}).then(function(r){return r.json();}).then(function(d){flash(d.status==='ok'?'Robot responded OK':'Robot returned error');}).catch(function(){flash('Cannot reach robot.',false);});
       }},'Test connection'),
       e('button',{style:{flex:1,background:'var(--tx)',color:'var(--bg)',border:'none',fontWeight:600},onClick:function(){onSave({mode:mode,endpoint:endpoint});flash('Settings saved');}},'Save')
     )
