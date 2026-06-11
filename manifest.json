@@ -1,13 +1,16 @@
 {
   "name": "GardenBot",
   "short_name": "GardenBot",
+  "description": "Automatic gardening robot plant management app",
   "start_url": "/gardenbot/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#38A169",
-  "icons": [{
-    "src": "https://via.placeholder.com/192",
-    "sizes": "192x192",
-    "type": "image/png"
-  }]
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%2338A169'/%3E%3Ctext x='96' y='140' font-size='120' text-anchor='middle'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
 }
