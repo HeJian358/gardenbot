@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="GardenBot">
+<meta name="theme-color" content="#38A169">
+<title>GardenBot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#f0f0ed;
+  --tx:#111;--tx2:#555;--tx3:#999;
+  --bd:rgba(0,0,0,0.11);--bd2:rgba(0,0,0,0.2);
+  --ok:#16a34a;--ok-bg:#f0fdf4;
+  --err:#dc2626;--err-bg:#fef2f2;
+  --warn:#d97706;--warn-bg:#fffbeb;
+  --info:#2563eb;--info-bg:#eff6ff;
+  --r:10px;--r2:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#000;
+  --tx:#f2f2f7;--tx2:#aeaeb2;--tx3:#636366;
+  --bd:rgba(255,255,255,0.11);--bd2:rgba(255,255,255,0.2);
+  --ok:#34d399;--ok-bg:#052e16;
+  --err:#f87171;--err-bg:#3b0a0a;
+  --warn:#fbbf24;--warn-bg:#431407;
+  --info:#60a5fa;--info-bg:#172554;
+}}
+html,body{height:100%;background:var(--bg3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--tx)}
+#root{max-width:480px;margin:0 auto;min-height:100svh;display:flex;flex-direction:column;background:var(--bg3)}
+.loading{display:flex;align-items:center;justify-content:center;height:100svh;color:var(--tx2);font-size:15px}
+input,button,select,textarea{font-family:inherit;outline:none}
+input{width:100%;padding:10px 14px;border:1px solid var(--bd2);border-radius:var(--r);font-size:14px;background:var(--bg);color:var(--tx)}
+input:focus{border-color:var(--info);box-shadow:0 0 0 3px rgba(37,99,235,0.15)}
+button{cursor:pointer;background:transparent;color:var(--tx);border:1px solid var(--bd2);border-radius:var(--r);padding:10px 16px;font-size:14px}
+button:active{opacity:0.7}
+.content{flex:1;overflow-y:auto;padding-bottom:8px}
+/* Cards */
+.card{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px;margin-bottom:10px}
+/* Bottom nav */
+.nav{display:flex;border-top:1px solid var(--bd);background:var(--bg);padding-bottom:env(safe-area-inset-bottom,0)}
+.nav-btn{flex:1;border:none;border-radius:0;padding:10px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--tx3);background:transparent}
+.nav-btn.on{color:var(--tx);font-weight:600}
+.nav-icon{font-size:22px;line-height:1}
+/* Misc */
+.row{display:flex;justify-content:space-between;align-items:center}
+.gap{display:flex;gap:8px}
+.mono{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12px}
+.muted{color:var(--tx2)}
+.hint-text{color:var(--tx3)}
+.hint{font-size:12px;color:var(--tx3);margin-top:5px;line-height:1.5}
+.badge{font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px;white-space:nowrap;border:1px solid transparent}
+.chip{font-size:11px;background:var(--bg2);padding:3px 9px;border-radius:20px;color:var(--tx2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stat{background:var(--bg2);border-radius:var(--r);padding:10px}
+.stat-label{font-size:11px;color:var(--tx2);margin-bottom:3px}
+.stat-value{font-size:13px;font-weight:600}
+.mbar-wrap{position:relative;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.mbar-target{position:absolute;top:0;height:100%;background:rgba(22,163,74,0.2);pointer-events:none}
+.mbar-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.msg{font-size:13px;margin-top:8px;padding:8px 12px;border-radius:var(--r)}
+.msg-ok{background:var(--ok-bg);color:var(--ok)}
+.msg-warn{background:var(--warn-bg);color:var(--warn)}
+.section-title{font-size:15px;font-weight:600;margin-bottom:12px}
+.divider{border:none;border-top:1px solid var(--bd);margin:12px 0}
+.c-ok{color:var(--ok)} .c-err{color:var(--err)} .c-warn{color:var(--warn)} .c-info{color:var(--info)} .c-muted{color:var(--tx2)} .c-hint{color:var(--tx3)}
+.pick-btn{width:100%;padding:12px 14px;border-radius:var(--r);border:1px solid var(--bd2);cursor:pointer;background:var(--bg);color:var(--tx);text-align:left;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.plant-row{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r2);padding:13px 15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;width:100%;text-align:left}
+.pot-card{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r2);padding:15px 17px;cursor:pointer;margin-bottom:10px;display:block;width:100%;text-align:left}
+.stage-item{padding:11px 14px;border-radius:var(--r);border:1px solid var(--bd);cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px;background:var(--bg);width:100%;text-align:left}
+.flex-tags{display:flex;gap:6px;flex-wrap:wrap}
+.back-btn{background:none;border:none;color:var(--tx2);font-size:15px;padding:4px 0;display:flex;align-items:center;gap:5px;cursor:pointer}
+.page-pad{padding:16px}
+.list-pad{padding:0 12px}
+.center{text-align:center}
+.api-row{display:flex;gap:8px;align-items:baseline;font-size:12px;margin-bottom:5px}
+.method{font-size:11px;font-weight:600;border-radius:4px;padding:2px 6px;white-space:nowrap;background:var(--info-bg);color:var(--info)}
+.empty{padding:3rem 1.5rem;text-align:center}
+.h1{font-size:18px;font-weight:600;margin:0}
+.h2{font-size:20px;font-weight:600;margin:0 0 2px}
+.page-header{padding:16px 16px 0}
+</style>
+</head>
+<body>
+<div id="root"><div class="loading">Loading GardenBot…</div></div>
+
+<script>
+window.onerror=function(m,u,l){document.getElementById('root').innerHTML='<div style="padding:20px;color:#dc2626;font-family:monospace;font-size:13px;white-space:pre-wrap">JS Error:\n'+m+'\nLine: '+l+'</div>';return true;};
+</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script>
+// ─── localStorage adapter ────────────────────────────────────────────────────
+function lsGet(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+var PLANTS=[
+  {id:1,code:'CHERRY_TOMATO',en:'Cherry Tomato',cn:'小番茄',cat:'vegetables',diff:'beginner',tmin:15,tmax:30},
+  {id:2,code:'LETTUCE',en:'Lettuce',cn:'生菜',cat:'vegetables',diff:'beginner',tmin:10,tmax:25},
+  {id:3,code:'BASIL',en:'Basil',cn:'罗勒',cat:'herbs',diff:'beginner',tmin:15,tmax:30},
+  {id:4,code:'CHIVE',en:'Chive',cn:'韭菜',cat:'herbs',diff:'beginner',tmin:5,tmax:30},
+  {id:5,code:'MINT',en:'Mint',cn:'薄荷',cat:'herbs',diff:'beginner',tmin:10,tmax:30},
+  {id:6,code:'CORIANDER',en:'Coriander',cn:'香菜',cat:'herbs',diff:'beginner',tmin:10,tmax:25},
+  {id:7,code:'PARSLEY',en:'Parsley',cn:'欧芹',cat:'herbs',diff:'intermediate',tmin:10,tmax:25},
+  {id:8,code:'SPINACH',en:'Spinach',cn:'菠菜',cat:'vegetables',diff:'beginner',tmin:10,tmax:24},
+  {id:9,code:'PAK_CHOI',en:'Pak Choi',cn:'小白菜',cat:'vegetables',diff:'beginner',tmin:10,tmax:30},
+  {id:10,code:'SPRING_ONION',en:'Spring Onion',cn:'葱',cat:'vegetables',diff:'beginner',tmin:5,tmax:30},
+  {id:11,code:'CHILI_PEPPER',en:'Chili Pepper',cn:'辣椒',cat:'vegetables',diff:'intermediate',tmin:18,tmax:35},
+  {id:12,code:'CUCUMBER',en:'Cucumber',cn:'黄瓜',cat:'vegetables',diff:'intermediate',tmin:20,tmax:35},
+  {id:13,code:'STRAWBERRY',en:'Strawberry',cn:'草莓',cat:'fruits',diff:'intermediate',tmin:10,tmax:25},
+  {id:14,code:'DWARF_BEAN',en:'Dwarf Bean',cn:'矮菜豆',cat:'vegetables',diff:'intermediate',tmin:15,tmax:30},
+  {id:15,code:'ROSEMARY',en:'Rosemary',cn:'迷迭香',cat:'herbs',diff:'intermediate',tmin:10,tmax:30},
+  {id:16,code:'THYME',en:'Thyme',cn:'百里香',cat:'herbs',diff:'intermediate',tmin:10,tmax:28},
+];
+var CARE={
+  germination:{mmin:60,mmax:75,light:'6-8 h',water:'30–60 ml',probe:5,delay:120,fert:false,tip:'Keep soil consistently moist at 20–25°C. No direct sun yet.'},
+  seedling_establishment:{mmin:55,mmax:70,light:'8-10 h',water:'60–100 ml',probe:5,delay:180,fert:false,tip:'Introduce gentle sunlight gradually. Let surface dry slightly between waterings.'},
+  vegetative:{mmin:50,mmax:65,light:'10-12 h',water:'80–150 ml',probe:8,delay:180,fert:true,tip:'Allow soil surface to dry. Fertilize every 14 days with balanced NPK.'},
+  mature:{mmin:45,mmax:60,light:'10-12 h',water:'100–200 ml',probe:10,delay:240,fert:true,tip:'Harvest regularly to encourage production. Monitor for pests.'},
+};
+var STAGES=[
+  {key:'germination',label:'Germination',cn:'萌芽期'},
+  {key:'seedling_establishment',label:'Seedling',cn:'幼苗期'},
+  {key:'vegetative',label:'Vegetative',cn:'营养生长'},
+  {key:'mature',label:'Mature',cn:'成熟期'},
+];
+var SC={germination:'#D69E2E',seedling_establishment:'#38A169',vegetative:'#3182CE',mature:'#805AD5'};
+
+function timeAgo(ts){if(!ts)return'—';var s=(Date.now()-new Date(ts))/1000;if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+function getPlant(id){return PLANTS.find(function(p){return p.id===id;});}
+function getCare(stage){return CARE[stage]||CARE.germination;}
+function getStage(key){return STAGES.find(function(s){return s.key===key;})||STAGES[0];}
+
+// ─── React shorthand ──────────────────────────────────────────────────────────
+var e=React.createElement;
+var useState=React.useState;
+var useEffect=React.useEffect;
+var useCallback=React.useCallback;
+
+// ─── Small components ─────────────────────────────────────────────────────────
+function MoistBar(props){
+  var val=props.val,min=props.min,max=props.max;
+  var pct=val!=null?Math.min(100,Math.max(0,val)):null;
+  var dry=pct!=null&&pct<min,wet=pct!=null&&pct>max;
+  var col=pct==null?'var(--bd)':dry?'var(--err)':wet?'var(--warn)':'var(--ok)';
+  return e('div',{className:'mbar-wrap'},
+    e('div',{className:'mbar-target',style:{left:min+'%',width:(max-min)+'%'}}),
+    pct!=null?e('div',{className:'mbar-fill',style:{width:pct+'%',background:col}}):null
+  );
+}
+function StageBadge(props){
+  var key=props.stageKey;
+  var c=SC[key]||SC.germination;
+  var lbl=getStage(key).label;
+  return e('span',{className:'badge',style:{color:c,background:c+'1a',borderColor:c+'55'}},lbl);
+}
+function BackBtn(props){
+  return e('button',{className:'back-btn',onClick:props.onClick},'← '+props.label);
+}
+function Msg(props){
+  if(!props.text)return null;
+  return e('div',{className:'msg '+(props.ok!==false?'msg-ok':'msg-warn')},props.text);
+}
+
+// ─── GARDEN TAB ───────────────────────────────────────────────────────────────
+function GardenTab(props){
+  var pots=props.pots,onSelect=props.onSelect,onAdd=props.onAdd;
+  if(!pots.length){
+    return e('div',{className:'content'},
+      e('div',{className:'empty'},
+        e('div',{style:{fontSize:52,marginBottom:'1rem'}},'🌱'),
+        e('p',{style:{color:'var(--tx2)',marginBottom:'1.5rem'}},'No pots registered yet'),
+        e('button',{onClick:onAdd,style:{padding:'10px 24px',borderRadius:'var(--r)',border:'1px solid var(--bd2)',cursor:'pointer',background:'var(--tx)',color:'var(--bg)',fontWeight:600}},'+ Register first pot')
+      )
+    );
+  }
+  return e('div',{className:'content'},
+    e('div',{className:'row page-header',style:{paddingBottom:0}},
+      e('h2',{className:'h1'},'My Garden'),
+      e('button',{onClick:onAdd,style:{fontSize:13,border:'1px solid var(--bd2)',borderRadius:'var(--r)',padding:'6px 14px',cursor:'pointer',background:'transparent',color:'var(--tx)'}},'+  Add pot')
+    ),
+    e('div',{style:{padding:'12px 12px 0'}},
+      pots.map(function(pot){
+        var p=getPlant(pot.plant_id),c=getCare(pot.current_stage);
+        var moist=pot.last_moisture;
+        var dry=moist!=null&&moist<c.mmin,wet=moist!=null&&moist>c.mmax;
+        var sc=moist==null?'var(--tx2)':dry?'var(--err)':wet?'var(--warn)':'var(--ok)';
+        return e('button',{key:pot.pot_code,className:'pot-card',onClick:function(){onSelect(pot);}},
+          e('div',{className:'row',style:{marginBottom:10}},
+            e('div',null,
+              e('div',{className:'row',style:{gap:8,marginBottom:3}},
+                e('span',{style:{fontWeight:600}},pot.custom_name||(p&&p.en)||'?'),
+                e('span',{className:'mono c-hint'},pot.pot_code)
+              ),
+              pot.location?e('span',{style:{fontSize:12,color:'var(--tx2)'}},pot.location):null
+            ),
+            e(StageBadge,{stageKey:pot.current_stage})
+          ),
+          e('div',{style:{marginBottom:8}},
+            e('div',{className:'row',style:{fontSize:12,color:'var(--tx2)',marginBottom:4}},
+              e('span',null,'Soil moisture'),
+              e('span',{className:'mono',style:{color:sc}},moist!=null?moist+'%':'no reading',' (',c.mmin,'–',c.mmax,'%)')
+            ),
+            e(MoistBar,{val:moist,min:c.mmin,max:c.mmax})
+          ),
+          e('div',{style:{display:'flex',gap:12,fontSize:11,color:'var(--tx3)'}},
+            e('span',null,'watered '+timeAgo(pot.last_watered)),
+            e('span',null,'·'),
+            e('span',null,'measured '+timeAgo(pot.last_measured))
+          )
+        );
+      })
+    )
+  );
+}
+
+// ─── POT DETAIL ───────────────────────────────────────────────────────────────
+function PotDetail(props){
+  var pot=props.pot,onBack=props.onBack,onUpdate=props.onUpdate,onDelete=props.onDelete;
+  var p=getPlant(pot.plant_id),c=getCare(pot.current_stage);
+  var stg=useState(false);var editStage=stg[0],setEditStage=stg[1];
+  var mv=useState('');var manVal=mv[0],setManVal=mv[1];
+  var ms=useState(null);var msg=ms[0],setMsg=ms[1];
+
+  function flash(text,ok){setMsg({text:text,ok:ok!==false});setTimeout(function(){setMsg(null);},2500);}
+
+  var moist=pot.last_moisture;
+  var dry=moist!=null&&moist<c.mmin,wet=moist!=null&&moist>c.mmax;
+  var sc=moist==null?'var(--tx2)':dry?'var(--err)':wet?'var(--warn)':'var(--ok)';
+  var st=moist==null?'No reading':dry?'Needs water':wet?'Too wet':'Good';
+
+  function logMoist(){
+    var v=parseFloat(manVal);
+    if(isNaN(v)||v<0||v>100){flash('Enter 0–100',false);return;}
+    onUpdate(Object.assign({},pot,{last_moisture:Math.round(v*10)/10,last_measured:new Date().toISOString()}));
+    setManVal('');flash('Reading saved');
+  }
+  function logWater(){
+    onUpdate(Object.assign({},pot,{last_watered:new Date().toISOString()}));
+    flash('Watering logged');
+  }
+
+  var careItems=[
+    ['Moisture',c.mmin+'–'+c.mmax+'%'],
+    ['Light',c.light],['Water dose',c.water],
+    ['Probe depth',c.probe+' cm'],['Re-measure',c.delay+' s'],
+    ['Fertilize',c.fert?'Required':'Not yet']
+  ];
+
+  return e('div',{className:'content'},
+    e('div',{className:'page-pad'},
+      e(BackBtn,{label:'Garden',onClick:onBack}),
+      e('div',{className:'row',style:{marginBottom:16}},
+        e('div',null,
+          e('h2',{className:'h2'},pot.custom_name||(p&&p.en)||'?'),
+          e('div',{className:'mono c-hint',style:{fontSize:12}},pot.pot_code+(pot.location?' · '+pot.location:''))
+        ),
+        e(StageBadge,{stageKey:pot.current_stage})
+      )
+    ),
+
+    e('div',{style:{padding:'0 12px'}},
+      // Moisture card
+      e('div',{className:'card'},
+        e('div',{className:'row',style:{marginBottom:12}},
+          e('span',{style:{fontWeight:600}},'Soil moisture'),
+          e('span',{style:{fontSize:13,fontWeight:600,color:sc}},moist!=null?moist+'%  ·  ':'',st)
+        ),
+        moist!=null?e('div',null,
+          e(MoistBar,{val:moist,min:c.mmin,max:c.mmax}),
+          e('div',{className:'row',style:{fontSize:11,color:'var(--tx3)',marginTop:4}},
+            e('span',null,'0%'),e('span',null,'Target '+c.mmin+'–'+c.mmax+'%'),e('span',null,'100%'))
+        ):e('div',{style:{fontSize:13,color:'var(--tx3)',textAlign:'center',padding:'4px'}},'No reading yet'),
+        pot.last_measured?e('div',{style:{fontSize:12,color:'var(--tx3)',marginTop:8}},
+          'Measured '+timeAgo(pot.last_measured)+' · Watered '+timeAgo(pot.last_watered)):null
+      ),
+
+      // Care card
+      e('div',{className:'card'},
+        e('div',{className:'section-title'},'Care advice — '+getStage(pot.current_stage).label),
+        e('div',{className:'grid3',style:{marginBottom:12}},
+          careItems.map(function(x){return e('div',{key:x[0],className:'stat'},e('div',{className:'stat-label'},x[0]),e('div',{className:'stat-value'},x[1]));})
+        ),
+        e('hr',{className:'divider'}),
+        e('p',{style:{fontSize:13,color:'var(--tx2)',lineHeight:1.65}},c.tip)
+      ),
+
+      // Log card
+      e('div',{className:'card'},
+        e('div',{className:'section-title'},'Log sensor reading'),
+        e('div',{className:'gap'},
+          e('input',{type:'number',min:'0',max:'100',step:'0.1',placeholder:'Enter moisture % (0–100)',value:manVal,onChange:function(ev){setManVal(ev.target.value);},style:{flex:1}}),
+          e('button',{onClick:logMoist,style:{whiteSpace:'nowrap',flexShrink:0}},'Log')
+        ),
+        e('button',{onClick:logWater,style:{width:'100%',marginTop:8}},'Log manual watering'),
+        msg?e(Msg,{text:msg.text,ok:msg.ok}):null
+      ),
+
+      // Stage card
+      e('div',{className:'card'},
+        e('div',{className:'row'},
+          e('span',{style:{fontWeight:600}},'Growth stage'),
+          e('button',{onClick:function(){setEditStage(!editStage);},style:{fontSize:13,color:'var(--tx2)',border:'none',padding:'4px 0',background:'transparent'}},editStage?'Cancel':'Update stage')
+        ),
+        editStage?e('div',{style:{marginTop:12}},
+          STAGES.map(function(s){
+            var cc=SC[s.key],active=s.key===pot.current_stage;
+            return e('button',{key:s.key,className:'stage-item',
+              style:{border:active?'2px solid '+cc:'1px solid var(--bd)',background:active?cc+'12':'var(--bg)'},
+              onClick:function(){onUpdate(Object.assign({},pot,{current_stage:s.key,stage_start_date:new Date().toISOString()}));setEditStage(false);}},
+              e('span',null,e('strong',{style:{color:active?cc:'var(--tx)'}},s.label),' ',e('span',{style:{color:'var(--tx2)',fontSize:12}},'('+s.cn+')')),
+              active?e('span',{style:{color:cc}},'✓'):null
+            );
+          })
+        ):null
+      ),
+
+      e('div',{style:{textAlign:'center',padding:'8px 0 16px'}},
+        e('button',{onClick:function(){if(window.confirm('Remove '+pot.pot_code+'?'))onDelete(pot.pot_code);},style:{border:'none',fontSize:13,color:'var(--err)',background:'transparent',cursor:'pointer'}},'Remove this pot')
+      )
+    )
+  );
+}
+
+// ─── ADD POT ─────────────────────────────────────────────────────────────────
+function AddPot(props){
+  var potCount=props.potCount,onSave=props.onSave,onCancel=props.onCancel,onPickPlant=props.onPickPlant,pickedPlantId=props.pickedPlantId;
+  var pid=useState(pickedPlantId||1);var plantId=pid[0],setPlantId=pid[1];
+  var cn=useState('');var customName=cn[0],setCustomName=cn[1];
+  var loc=useState('');var location=loc[0],setLocation=loc[1];
+  var sg=useState('germination');var stage=sg[0],setStage=sg[1];
+  var sd=useState(new Date().toISOString().split('T')[0]);var sowDate=sd[0],setSowDate=sd[1];
+
+  // sync picked plant
+  useEffect(function(){if(pickedPlantId)setPlantId(pickedPlantId);},[pickedPlantId]);
+
+  var p=getPlant(plantId);
+  var potCode='POT_'+String(potCount+1).padStart(2,'0');
+
+  function Field(label,value,setValue,type,ph){
+    return e('div',{style:{marginBottom:14}},
+      e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},label),
+      e('input',{type:type||'text',placeholder:ph||'',value:value,onChange:function(ev){setValue(ev.target.value);}})
+    );
+  }
+
+  return e('div',{className:'content'},
+    e('div',{className:'page-pad'},
+      e('div',{className:'row',style:{marginBottom:'1.5rem'}},
+        e('button',{onClick:onCancel,style:{border:'none',fontSize:20,color:'var(--tx2)',padding:'4px 8px 4px 0',background:'transparent',cursor:'pointer'}},'✕'),
+        e('div',null,
+          e('h2',{className:'h1'},'Register new pot'),
+          e('div',{className:'mono c-hint',style:{fontSize:12}},'will be assigned: '+potCode)
+        ),
+        e('div',{style:{width:32}})
+      ),
+      e('div',{style:{marginBottom:14}},
+        e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},'Plant *'),
+        e('button',{className:'pick-btn',onClick:onPickPlant},
+          e('span',null,e('strong',null,(p&&p.en)||'?'),' ',e('span',{style:{color:'var(--tx2)',fontSize:12}},p?p.cn:'')),
+          e('span',{style:{color:'var(--tx2)'}},'›')
+        )
+      ),
+      Field('Custom name (optional)',customName,setCustomName,'text','e.g. My Tomato #1'),
+      Field('Location label',location,setLocation,'text','e.g. South balcony, shelf 2'),
+      e('div',{style:{marginBottom:14}},
+        e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},'Sowing date'),
+        e('input',{type:'date',value:sowDate,onChange:function(ev){setSowDate(ev.target.value);}})
+      ),
+      e('div',{style:{marginBottom:14}},
+        e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},'Growth stage *'),
+        e('div',{className:'flex-tags'},
+          STAGES.map(function(s){
+            var cc=SC[s.key],active=stage===s.key;
+            return e('button',{key:s.key,onClick:function(){setStage(s.key);},
+              style:{flex:'1 1 auto',padding:'8px 4px',borderRadius:'var(--r)',fontSize:12,fontWeight:active?600:400,
+                border:active?'2px solid '+cc:'1px solid var(--bd)',
+                background:active?cc+'14':'transparent',color:active?cc:'var(--tx2)'}},s.label);
+          })
+        )
+      ),
+      e('button',{onClick:function(){
+        onSave({pot_code:potCode,plant_id:plantId,custom_name:customName||null,
+          current_stage:stage,stage_start_date:new Date().toISOString(),
+          location:location||null,sow_date:sowDate,
+          last_moisture:null,last_measured:null,last_watered:null});
+      },style:{width:'100%',padding:'14px',borderRadius:'var(--r)',border:'none',cursor:'pointer',background:'var(--tx)',color:'var(--bg)',fontSize:15,fontWeight:600,marginTop:8}},'Register pot')
+    )
+  );
+}
+
+// ─── PLANT PICK ───────────────────────────────────────────────────────────────
+function PlantPick(props){
+  var onBack=props.onBack,onPick=props.onPick,currentId=props.currentId;
+  var sq=useState('');var search=sq[0],setSearch=sq[1];
+  var filtered=PLANTS.filter(function(p){return p.en.toLowerCase().includes(search.toLowerCase())||p.cn.includes(search);});
+  return e('div',{className:'content'},
+    e('div',{className:'page-pad'},
+      e(BackBtn,{label:'Back',onClick:onBack}),
+      e('h2',{className:'h1',style:{marginBottom:12}},'Select plant')
+    ),
+    e('div',{style:{padding:'0 12px 10px'}},
+      e('input',{type:'text',placeholder:'Search…',value:search,onChange:function(ev){setSearch(ev.target.value);}})
+    ),
+    e('div',{className:'list-pad'},
+      filtered.map(function(p){
+        var active=p.id===currentId;
+        return e('button',{key:p.id,className:'plant-row',
+          style:{border:active?'2px solid var(--info)':'1px solid var(--bd)',background:active?'var(--info-bg)':'var(--bg)'},
+          onClick:function(){onPick(p.id);}},
+          e('div',null,e('div',{style:{fontWeight:600,marginBottom:2}},p.en),e('div',{style:{fontSize:12,color:'var(--tx2)'}},p.cn+' · '+p.tmin+'–'+p.tmax+'°C')),
+          e('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+            e('span',{className:'chip'},p.cat),
+            e('span',{style:{fontSize:11,color:p.diff==='beginner'?'var(--ok)':'var(--warn)'}},p.diff)
+          )
+        );
+      })
+    )
+  );
+}
+
+// ─── PLANTS TAB ───────────────────────────────────────────────────────────────
+function PlantsTab(){
+  var ct=useState('all');var cat=ct[0],setCat=ct[1];
+  var sq=useState('');var search=sq[0],setSearch=sq[1];
+  var dv=useState(null);var detail=dv[0],setDetail=dv[1];
+  var filtered=PLANTS.filter(function(p){return(cat==='all'||p.cat===cat)&&(p.en.toLowerCase().includes(search.toLowerCase())||p.cn.includes(search));});
+
+  if(detail){
+    var pd=detail;
+    return e('div',{className:'content'},
+      e('div',{className:'page-pad'},
+        e(BackBtn,{label:'Catalog',onClick:function(){setDetail(null);}}),
+        e('h2',{className:'h2'},pd.en),
+        e('div',{style:{fontSize:14,color:'var(--tx2)',marginBottom:'1.5rem'}},pd.cn,' · ',pd.cat,' · ',e('span',{style:{color:pd.diff==='beginner'?'var(--ok)':'var(--warn)'}},pd.diff)),
+        e('div',{className:'grid2',style:{marginBottom:'1.5rem'}},
+          [['Temp range',pd.tmin+'–'+pd.tmax+' °C'],['Category',pd.cat],['Difficulty',pd.diff],['Plant code',pd.code]].map(function(x){
+            return e('div',{key:x[0],className:'stat'},e('div',{className:'stat-label'},x[0]),e('div',{className:'stat-value'},x[1]));
+          })
+        ),
+        e('div',{style:{fontWeight:600,marginBottom:10}},'Growth stage rules'),
+        STAGES.map(function(s){
+          var c=getCare(s.key),col=SC[s.key];
+          return e('div',{key:s.key,className:'card',style:{borderLeft:'3px solid '+col,marginBottom:8}},
+            e('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:10}},
+              e('span',{style:{fontWeight:600,color:col}},s.label),
+              e('span',{style:{fontSize:12,color:'var(--tx2)'}},'('+s.cn+')')
+            ),
+            e('div',{className:'grid3',style:{marginBottom:8}},
+              [['Moisture',c.mmin+'–'+c.mmax+'%'],['Light',c.light],['Water',c.water]].map(function(x){
+                return e('div',{key:x[0],className:'stat'},e('div',{className:'stat-label'},x[0]),e('div',{className:'stat-value'},x[1]));
+              })
+            ),
+            e('p',{style:{fontSize:12,color:'var(--tx2)',lineHeight:1.55}},c.tip)
+          );
+        })
+      )
+    );
+  }
+
+  return e('div',{className:'content'},
+    e('div',{className:'page-header'},
+      e('h2',{className:'h1',style:{marginBottom:12}},'Plant catalog ',e('span',{style:{fontSize:13,fontWeight:400,color:'var(--tx2)'}},'('+PLANTS.length+' species)'))
+    ),
+    e('div',{style:{padding:'0 12px 10px'}},
+      e('input',{type:'text',placeholder:'Search…',value:search,onChange:function(ev){setSearch(ev.target.value);}})
+    ),
+    e('div',{style:{padding:'0 12px 10px',display:'flex',gap:6,flexWrap:'wrap'}},
+      ['all','vegetables','herbs','fruits'].map(function(c){
+        return e('button',{key:c,onClick:function(){setCat(c);},
+          style:{padding:'5px 14px',borderRadius:'20px',fontSize:13,fontWeight:cat===c?600:400,
+            border:cat===c?'1.5px solid var(--info)':'1px solid var(--bd)',
+            background:cat===c?'var(--info-bg)':'transparent',
+            color:cat===c?'var(--info)':'var(--tx2)'}},c==='all'?'All':c.charAt(0).toUpperCase()+c.slice(1));
+      })
+    ),
+    e('div',{className:'list-pad'},
+      filtered.map(function(p){
+        return e('button',{key:p.id,className:'plant-row',onClick:function(){setDetail(p);}},
+          e('div',null,e('div',{style:{fontWeight:600,marginBottom:2}},p.en),e('div',{style:{fontSize:12,color:'var(--tx2)'}},p.cn+' · '+p.tmin+'–'+p.tmax+'°C')),
+          e('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+            e('span',{className:'chip'},p.cat),
+            e('span',{style:{fontSize:11,color:p.diff==='beginner'?'var(--ok)':'var(--warn)'}},p.diff),
+            e('span',{style:{color:'var(--tx3)'}},'›')
+          )
+        );
+      })
+    )
+  );
+}
+
+// ─── ROBOT TAB ────────────────────────────────────────────────────────────────
+function RobotTab(props){
+  var settings=props.settings,onSave=props.onSave;
+  var md=useState(settings.mode||'offline');var mode=md[0],setMode=md[1];
+  var ep=useState(settings.endpoint||'http://192.168.1.100');var endpoint=ep[0],setEndpoint=ep[1];
+  var ms=useState(null);var msg=ms[0],setMsg=ms[1];
+  function flash(text,ok){setMsg({text:text,ok:ok!==false});setTimeout(function(){setMsg(null);},2500);}
+
+  var MODES=[
+    {key:'wifi',label:'WiFi (LAN)',desc:'App and robot on same local network'},
+    {key:'mqtt',label:'WiFi (Internet)',desc:'Via MQTT broker — remote control'},
+    {key:'ble',label:'Bluetooth BLE',desc:'Direct short-range ~10 m'},
+    {key:'offline',label:'Offline',desc:'Manual data entry only — no robot link'},
+  ];
+  var API=[
+    ['GET','/api/ping','Health check'],
+    ['GET','/api/measure?pot_code=X','Trigger measurement'],
+    ['POST','/api/water?pot_code=X','Trigger watering'],
+    ['GET','/api/reading/latest?pot_code=X','Latest reading'],
+    ['POST','/api/pots','Register pot (JSON body)'],
+    ['GET','/api/status','Robot status'],
+  ];
+
+  return e('div',{className:'content page-pad'},
+    e('h2',{className:'h1',style:{marginBottom:4}},'Robot connection'),
+    e('p',{style:{fontSize:13,color:'var(--tx2)',marginBottom:'1rem'}},'Configure how this app talks to the ESP32 robot.'),
+    e('div',{style:{marginBottom:'1.5rem'}},
+      MODES.map(function(m){
+        var active=mode===m.key;
+        return e('div',{key:m.key,onClick:function(){setMode(m.key);},
+          style:{padding:'12px 14px',borderRadius:'var(--r2)',border:active?'2px solid var(--info)':'1px solid var(--bd)',background:active?'var(--info-bg)':'var(--bg)',marginBottom:6,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          e('div',null,e('div',{style:{fontWeight:600,fontSize:14}},m.label),e('div',{style:{fontSize:12,color:'var(--tx2)'}},m.desc)),
+          active?e('span',{style:{color:'var(--info)'}},'✓'):null
+        );
+      })
+    ),
+    mode==='wifi'?e('div',{style:{marginBottom:'1rem'}},
+      e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},'Robot IP address'),
+      e('input',{type:'text',placeholder:'http://192.168.1.100',value:endpoint,onChange:function(ev){setEndpoint(ev.target.value);}}),
+      e('div',{className:'hint'},'ESP32 serves REST API here. App and robot must share the same WiFi router.')
+    ):null,
+    e('div',{className:'card',style:{marginBottom:'1rem'}},
+      e('div',{style:{fontWeight:600,marginBottom:10}},'ESP32 REST API endpoints'),
+      API.map(function(row){
+        return e('div',{key:row[1],className:'api-row'},
+          e('span',{className:'method'},row[0]),
+          e('span',{className:'mono',style:{flex:1,fontSize:11}},row[1]),
+          e('span',{style:{color:'var(--tx3)',fontSize:11,whiteSpace:'nowrap'}},row[2])
+        );
+      })
+    ),
+    msg?e(Msg,{text:msg.text,ok:msg.ok}):null,
+    e('div',{className:'gap'},
+      e('button',{style:{flex:1},onClick:function(){flash('Will connect when a measurement is triggered');}},'Test connection'),
+      e('button',{style:{flex:1,background:'var(--tx)',color:'var(--bg)',border:'none',fontWeight:600},onClick:function(){onSave({mode:mode,endpoint:endpoint});flash('Settings saved');}},'Save')
+    )
+  );
+}
+
+// ─── BOTTOM NAV ───────────────────────────────────────────────────────────────
+function BottomNav(props){
+  var tab=props.tab,setTab=props.setTab;
+  var TABS=[{key:'garden',icon:'🌿',label:'Garden'},{key:'plants',icon:'🌱',label:'Plants'},{key:'robot',icon:'📡',label:'Robot'}];
+  return e('nav',{className:'nav'},
+    TABS.map(function(t){
+      return e('button',{key:t.key,className:'nav-btn'+(tab===t.key?' on':''),onClick:function(){setTab(t.key);}},
+        e('div',{className:'nav-icon'},t.icon),
+        e('span',null,t.label)
+      );
+    })
+  );
+}
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+function App(){
+  var pr=useState(false);var ready=pr[0],setReady=pr[1];
+  var pt=useState([]);var pots=pt[0],setPots=pt[1];
+  var st=useState({mode:'offline',endpoint:'http://192.168.1.100'});var settings=st[0],setSettings=st[1];
+  var tb=useState('garden');var tab=tb[0],setTab=tb[1];
+  var vw=useState(null);var view=vw[0],setView=vw[1];
+  var vd=useState(null);var viewData=vd[0],setViewData=vd[1];
+  var pp=useState(null);var pickedPlant=pp[0],setPickedPlant=pp[1];
+
+  useEffect(function(){
+    var p=lsGet('gb_pots_v2');if(p)setPots(p);
+    var s=lsGet('gb_settings_v2');if(s)setSettings(s);
+    setReady(true);
+  },[]);
+
+  var savePots=useCallback(function(next){setPots(next);lsSet('gb_pots_v2',next);},[]);
+  var saveSettings=useCallback(function(next){setSettings(next);lsSet('gb_settings_v2',next);},[]);
+
+  if(!ready)return e('div',{className:'loading'},'Loading GardenBot…');
+
+  function handleUpdatePot(updated){
+    var next=pots.map(function(p){return p.pot_code===updated.pot_code?updated:p;});
+    savePots(next);setViewData(updated);
+  }
+  function handleDeletePot(code){
+    savePots(pots.filter(function(p){return p.pot_code!==code;}));
+    setView(null);setViewData(null);
+  }
+  function handleSavePot(pot){
+    savePots(pots.concat([pot]));
+    setView(null);setViewData(null);setPickedPlant(null);setTab('garden');
+  }
+
+  var content;
+  if(view==='pot-detail'){
+    content=e(PotDetail,{pot:viewData,onBack:function(){setView(null);setViewData(null);},onUpdate:handleUpdatePot,onDelete:handleDeletePot});
+  } else if(view==='add-pot'){
+    content=e(AddPot,{potCount:pots.length,onSave:handleSavePot,
+      onCancel:function(){setView(null);setViewData(null);setPickedPlant(null);},
+      onPickPlant:function(){setView('plant-pick');},
+      pickedPlantId:pickedPlant});
+  } else if(view==='plant-pick'){
+    content=e(PlantPick,{currentId:pickedPlant||1,
+      onBack:function(){setView('add-pot');},
+      onPick:function(id){setPickedPlant(id);setView('add-pot');}});
+  } else if(tab==='garden'){
+    content=e(GardenTab,{pots:pots,onSelect:function(pot){setViewData(pot);setView('pot-detail');},onAdd:function(){setView('add-pot');}});
+  } else if(tab==='plants'){
+    content=e(PlantsTab,null);
+  } else {
+    content=e(RobotTab,{settings:settings,onSave:saveSettings});
+  }
+
+  var showNav=!view||view==='plant-detail'?true:false;
+  // plant-detail is inside PlantsTab so nav should show when no special view
+  var navVisible=view===null;
+
+  return e('div',{id:'root-app',style:{display:'flex',flexDirection:'column',minHeight:'100svh',background:'var(--bg3)'}},
+    e('div',{style:{flex:1}},content),
+    navVisible?e(BottomNav,{tab:tab,setTab:function(t){setTab(t);setView(null);setViewData(null);}}):null
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(App,null));
+</script>
+</body>
+</html>
