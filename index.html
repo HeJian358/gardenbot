@@ -8,8 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="GardenBot">
 <meta name="theme-color" content="#38A169">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
 <title>GardenBot</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -545,19 +543,28 @@ function RobotTab(props){
         );
       })
     ),
-    mode==='wifi'?e('div',{style:{marginBottom:'1rem'}},
-      e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},'Robot IP address'),
-      e('input',{type:'text',placeholder:'http://192.168.1.100',value:endpoint,onChange:function(ev){setEndpoint(ev.target.value);}}),
-      e('div',{className:'hint'},'ESP32 REST API. App and robot must share the same WiFi.')
+    (mode==='wifi'||mode==='simulator')?e('div',{style:{marginBottom:'1rem'}},
+      e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},
+        mode==='simulator'?'Simulator server address (optional)':'Robot IP address'),
+      e('input',{type:'text',placeholder:'http://192.168.1.100:5000',value:endpoint,onChange:function(ev){setEndpoint(ev.target.value);}}),
+      e('div',{className:'hint'},
+        mode==='simulator'
+          ?'If esp32_simulator.py is running on your PC, enter its address here for real network round-trip data. Leave blank to generate fake data locally on the phone instead.'
+          :'ESP32 REST API. App and robot must share the same WiFi.')
     ):null,
     mode==='simulator'?e('div',{className:'card',style:{marginBottom:'1rem',background:'var(--warn-bg)',border:'1px solid var(--warn)'}},
       e('div',{style:{fontWeight:600,fontSize:14,marginBottom:6,color:'var(--warn)'}},'Hardware Simulator'),
-      e('p',{style:{fontSize:13,color:'var(--tx2)',marginBottom:12,lineHeight:1.6}},'Generates random moisture readings for all pots every 5 seconds. Simulates ESP32 without real hardware.'),
+      e('p',{style:{fontSize:13,color:'var(--tx2)',marginBottom:12,lineHeight:1.6}},
+        endpoint
+          ? 'Every 5 seconds the App will call '+endpoint+'/api/readings/all on your PC. The Python server runs a background thread that continuously drifts soil moisture for each pot — just like a real ESP32 patrol loop — and the App displays whatever it returns.'
+          : 'No server address set. The App will generate random moisture values locally on the phone every 5 seconds (no network needed).'
+      ),
       e('div',{className:'gap'},
         e('button',{onClick:startSim,disabled:simRunning,style:{flex:1,background:simRunning?'var(--bg2)':'var(--warn)',color:simRunning?'var(--tx3)':'#fff',border:'none',fontWeight:600,opacity:simRunning?0.6:1}},simRunning?'Running...':'Start Simulator'),
         e('button',{onClick:stopSim,disabled:!simRunning,style:{flex:1,background:!simRunning?'var(--bg2)':'var(--err)',color:!simRunning?'var(--tx3)':'#fff',border:'none',fontWeight:600,opacity:!simRunning?0.6:1}},'Stop')
       ),
-      simRunning?e('div',{style:{fontSize:12,color:'var(--warn)',marginTop:8,textAlign:'center'}},'Live - updating all pots every 5 seconds'):null
+      simRunning?e('div',{style:{fontSize:12,color:'var(--warn)',marginTop:8,textAlign:'center'}},
+        endpoint?'Live - polling '+endpoint+'/api/readings/all every 5s':'Live - generating local random data every 5s'):null
     ):null,
     e('div',{className:'card',style:{marginBottom:'1rem'}},
       e('div',{style:{fontWeight:600,fontSize:14,marginBottom:10}},'ESP32 REST API reference'),
@@ -566,8 +573,12 @@ function RobotTab(props){
     msg?e(Msg,{text:msg.text,ok:msg.ok}):null,
     e('div',{className:'gap'},
       e('button',{style:{flex:1},onClick:function(){
-        if(mode==='simulator'||mode==='offline'){flash('No real robot needed in this mode');return;}
-        fetch(endpoint+'/api/ping',{signal:AbortSignal.timeout(3000)}).then(function(r){return r.json();}).then(function(d){flash(d.status==='ok'?'Robot responded OK':'Robot returned error');}).catch(function(){flash('Cannot reach robot.',false);});
+        if(mode==='offline'){flash('No real robot needed in this mode');return;}
+        if(mode==='simulator'&&!endpoint){flash('No server set - using local fake data, nothing to test');return;}
+        fetch(endpoint+'/api/ping',{signal:AbortSignal.timeout(3000)})
+          .then(function(r){return r.json();})
+          .then(function(d){flash(d&&d.status==='ok'?'Robot/simulator responded OK':'Server returned error');})
+          .catch(function(){flash('Cannot reach server. Check IP and WiFi.',false);});
       }},'Test connection'),
       e('button',{style:{flex:1,background:'var(--tx)',color:'var(--bg)',border:'none',fontWeight:600},onClick:function(){onSave({mode:mode,endpoint:endpoint});flash('Settings saved');}},'Save')
     )
@@ -626,16 +637,49 @@ function App(){
   var savePots=useCallback(function(next){setPots(next);lsSet('gb_pots_v2',next);},[]);
   var saveSettings=useCallback(function(next){setSettings(next);lsSet('gb_settings_v2',next);},[]);
 
-  // Simulator: generate random moisture readings for all pots
+  // Simulator: fetch real readings from esp32_simulator.py if configured,
+  // otherwise fall back to local random generation (no server needed).
+  var CARE_RANGES_REF={
+    germination:{mmin:60,mmax:75},seedling_establishment:{mmin:55,mmax:70},
+    vegetative:{mmin:50,mmax:65},mature:{mmin:45,mmax:60}
+  };
   var handleSimReading=useCallback(function(){
-    var CARE_RANGES={
-      germination:{mmin:60,mmax:75},seedling_establishment:{mmin:55,mmax:70},
-      vegetative:{mmin:50,mmax:65},mature:{mmin:45,mmax:60}
-    };
+    var ep=(settings.endpoint||'').trim();
+    if(ep){
+      // Try the real simulator server first (true network round-trip)
+      fetch(ep+'/api/readings/all',{signal:AbortSignal.timeout(4000)})
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(!data||!data.readings)throw new Error('bad payload');
+          setPots(function(prev){
+            var byCode={};
+            data.readings.forEach(function(rd){byCode[rd.pot_code]=rd;});
+            var updated=prev.map(function(pot){
+              var rd=byCode[pot.pot_code];
+              if(!rd)return pot;
+              return Object.assign({},pot,{
+                last_moisture:rd.moisture_pct,
+                last_measured:rd.timestamp,
+                last_watered:rd.last_watered||pot.last_watered
+              });
+            });
+            lsSet('gb_pots_v2',updated);
+            return updated;
+          });
+        })
+        .catch(function(){
+          // Server unreachable -> fall back to local random generation
+          localSimTick();
+        });
+    } else {
+      localSimTick();
+    }
+  },[settings.endpoint]);
+
+  function localSimTick(){
     setPots(function(prev){
       var updated=prev.map(function(pot){
-        var range=CARE_RANGES[pot.current_stage]||{mmin:50,mmax:65};
-        // Simulate realistic drift: 60% chance near target, 20% dry, 20% wet
+        var range=CARE_RANGES_REF[pot.current_stage]||{mmin:50,mmax:65};
         var r=Math.random();
         var newMoisture;
         if(r<0.6){newMoisture=range.mmin+Math.random()*(range.mmax-range.mmin);}
@@ -646,7 +690,7 @@ function App(){
       lsSet('gb_pots_v2',updated);
       return updated;
     });
-  },[]);
+  }
 
   if(!ready)return e('div',{className:'loading'},'Loading GardenBot…');
 
