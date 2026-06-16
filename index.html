@@ -443,6 +443,7 @@ function AddPot(props){
           rfid_uid:rfidUid.trim().toUpperCase()||null,
           last_moisture:null,last_measured:null,last_watered:null});
       },style:{width:'100%',padding:'14px',borderRadius:'var(--r)',border:'none',cursor:'pointer',background:'var(--tx)',color:'var(--bg)',fontSize:15,fontWeight:600,marginTop:8}},'Register pot')
+  )
   );
 }
 
@@ -668,19 +669,19 @@ function App(){
          last_moisture:58,last_measured:'2026-06-11T08:10:00',last_watered:'2026-06-10T18:00:00'},
         {pot_code:'POT_02',plant_id:2,custom_name:'Lettuce A',current_stage:'seedling_establishment',
          stage_start_date:'2026-03-08',location:'Balcony Left',sow_date:'2026-03-01',
-         rfid_uid:'04D4E5F6'
+         rfid_uid:'04D4E5F6',
          last_moisture:64,last_measured:'2026-06-11T08:15:00',last_watered:'2026-06-10T17:30:00'},
         {pot_code:'POT_03',plant_id:1,custom_name:'Tomato Balcony 1',current_stage:'mature',
          stage_start_date:'2026-03-05',location:'Sunny Corner',sow_date:'2026-01-20',
-         rfid_uid:'04111222'
+         rfid_uid:'04111222',
          last_moisture:52,last_measured:'2026-06-11T08:20:00',last_watered:'2026-06-10T19:10:00'},
         {pot_code:'POT_04',plant_id:5,custom_name:'Mint Pot',current_stage:'mature',
          stage_start_date:'2026-03-02',location:'Indoor Window',sow_date:'2026-01-15',
-         rfid_uid:'04333444'
+         rfid_uid:'04333444',
          last_moisture:71,last_measured:'2026-06-11T08:25:00',last_watered:'2026-06-10T20:00:00'},
         {pot_code:'POT_05',plant_id:13,custom_name:'Strawberry Trial',current_stage:'vegetative',
          stage_start_date:'2026-03-03',location:'Balcony Left 2',sow_date:'2026-02-01',
-         rfid_uid:'04555666'
+         rfid_uid:'04555666',
          last_moisture:38,last_measured:'2026-06-11T08:30:00',last_watered:'2026-06-09T18:40:00'},
       ];
       setPots(testPots);lsSet('gb_pots_v2',testPots);
