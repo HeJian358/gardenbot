@@ -321,14 +321,61 @@ function PotDetail(props){
           })
         ):null
       ),
-
+      
+      // RFID card
+      e(RfidCard,{pot:pot,onUpdate:onUpdate}),
       e('div',{style:{textAlign:'center',padding:'8px 0 16px'}},
         e('button',{onClick:function(){if(window.confirm('Remove '+pot.pot_code+'?'))onDelete(pot.pot_code);},style:{border:'none',fontSize:13,color:'var(--err)',background:'transparent',cursor:'pointer'}},'Remove this pot')
       )
     )
   );
 }
+// ─── RFID CARD ────────────────────────────────────────────────────────────────
+function RfidCard(props){
+  var pot=props.pot,onUpdate=props.onUpdate;
+  var ed=useState(false);var editing=ed[0],setEditing=ed[1];
+  var rv=useState(pot.rfid_uid||'');var rfidVal=rv[0],setRfidVal=rv[1];
+  var ms=useState(null);var msg=ms[0],setMsg=ms[1];
 
+  function flash(text,ok){setMsg({text:text,ok:ok!==false});setTimeout(function(){setMsg(null);},2500);}
+
+  function saveUid(){
+    var v=rfidVal.trim().toUpperCase();
+    if(v&&!/^[0-9A-F]{6,16}$/.test(v)){flash('UID should be 6–16 hex characters, e.g. 04A1B2C3',false);return;}
+    onUpdate(Object.assign({},pot,{rfid_uid:v||null}));
+    setEditing(false);
+    flash(v?'RFID UID saved':'RFID UID cleared');
+  }
+
+  return e('div',{className:'card'},
+    e('div',{className:'row',style:{marginBottom:8}},
+      e('span',{style:{fontWeight:600}},'RFID tag'),
+      e('button',{onClick:function(){setRfidVal(pot.rfid_uid||'');setEditing(!editing);},
+        style:{fontSize:13,color:'var(--tx2)',border:'none',padding:'4px 0',background:'transparent'}},
+        editing?'Cancel':'Edit')
+    ),
+    e('div',{className:'mono',style:{fontSize:13,color:pot.rfid_uid?'var(--ok)':'var(--tx3)',marginBottom:editing?12:0}},
+      pot.rfid_uid||'Not yet bound — scan tag to link'
+    ),
+    editing?e('div',null,
+      e('div',{style:{fontSize:12,color:'var(--tx3)',marginBottom:8}},
+        'Enter the UID shown in the Arduino Serial Monitor when you scan the tag with RC522.\n',
+        e('br',null),
+        'Format: 6–16 hex characters, e.g. 04A1B2C3'
+      ),
+      e('div',{className:'gap',style:{marginBottom:8}},
+        e('input',{type:'text',placeholder:'e.g. 04A1B2C3',value:rfidVal,
+          onChange:function(ev){setRfidVal(ev.target.value.toUpperCase());},
+          style:{flex:1,fontFamily:'monospace'}}),
+        e('button',{onClick:saveUid,style:{whiteSpace:'nowrap',flexShrink:0}},'Save')
+      ),
+      pot.rfid_uid?e('button',{onClick:function(){setRfidVal('');},
+        style:{fontSize:12,color:'var(--tx3)',border:'none',background:'transparent',padding:0,cursor:'pointer',textDecoration:'underline'}},
+        'Clear UID'):null
+    ):null,
+    msg?e(Msg,{text:msg.text,ok:msg.ok}):null
+  );
+}
 // ─── ADD POT ─────────────────────────────────────────────────────────────────
 function AddPot(props){
   var potCount=props.potCount,onSave=props.onSave,onCancel=props.onCancel,onPickPlant=props.onPickPlant,pickedPlantId=props.pickedPlantId;
@@ -337,7 +384,8 @@ function AddPot(props){
   var loc=useState('');var location=loc[0],setLocation=loc[1];
   var sg=useState('germination');var stage=sg[0],setStage=sg[1];
   var sd=useState(new Date().toISOString().split('T')[0]);var sowDate=sd[0],setSowDate=sd[1];
-
+  var ru=useState('');var rfidUid=ru[0],setRfidUid=ru[1];
+  
   // sync picked plant
   useEffect(function(){if(pickedPlantId)setPlantId(pickedPlantId);},[pickedPlantId]);
 
@@ -370,6 +418,8 @@ function AddPot(props){
       ),
       Field('Custom name (optional)',customName,setCustomName,'text','e.g. My Tomato #1'),
       Field('Location label',location,setLocation,'text','e.g. South balcony, shelf 2'),
+      Field('RFID UID (optional)',rfidUid,setRfidUid,'text','e.g. 04A1B2C3  — scan later if unknown'),
+      rfidUid?e('div',{style:{fontSize:11,color:'var(--tx3)',marginTop:-10,marginBottom:14}},'Leave blank if you haven\'t scanned the tag yet. You can add it later from the pot detail page.'):null,
       e('div',{style:{marginBottom:14}},
         e('label',{style:{fontSize:13,color:'var(--tx2)',display:'block',marginBottom:5}},'Sowing date'),
         e('input',{type:'date',value:sowDate,onChange:function(ev){setSowDate(ev.target.value);}})
@@ -386,10 +436,10 @@ function AddPot(props){
           })
         )
       ),
-      e('button',{onClick:function(){
-        onSave({pot_code:potCode,plant_id:plantId,custom_name:customName||null,
+      onSave({pot_code:potCode,plant_id:plantId,custom_name:customName||null,
           current_stage:stage,stage_start_date:new Date().toISOString(),
           location:location||null,sow_date:sowDate,
+          rfid_uid:rfidUid.trim().toUpperCase()||null,
           last_moisture:null,last_measured:null,last_watered:null});
       },style:{width:'100%',padding:'14px',borderRadius:'var(--r)',border:'none',cursor:'pointer',background:'var(--tx)',color:'var(--bg)',fontSize:15,fontWeight:600,marginTop:8}},'Register pot')
     )
@@ -614,18 +664,23 @@ function App(){
       var testPots=[
         {pot_code:'POT_01',plant_id:3,custom_name:'Kitchen Basil',current_stage:'vegetative',
          stage_start_date:'2026-03-01',location:'Balcony Right',sow_date:'2026-02-10',
+         rfid_uid:'04A1B2C3',
          last_moisture:58,last_measured:'2026-06-11T08:10:00',last_watered:'2026-06-10T18:00:00'},
         {pot_code:'POT_02',plant_id:2,custom_name:'Lettuce A',current_stage:'seedling_establishment',
          stage_start_date:'2026-03-08',location:'Balcony Left',sow_date:'2026-03-01',
+         rfid_uid:'04D4E5F6'
          last_moisture:64,last_measured:'2026-06-11T08:15:00',last_watered:'2026-06-10T17:30:00'},
         {pot_code:'POT_03',plant_id:1,custom_name:'Tomato Balcony 1',current_stage:'mature',
          stage_start_date:'2026-03-05',location:'Sunny Corner',sow_date:'2026-01-20',
+         rfid_uid:'04111222'
          last_moisture:52,last_measured:'2026-06-11T08:20:00',last_watered:'2026-06-10T19:10:00'},
         {pot_code:'POT_04',plant_id:5,custom_name:'Mint Pot',current_stage:'mature',
          stage_start_date:'2026-03-02',location:'Indoor Window',sow_date:'2026-01-15',
+         rfid_uid:'04333444'
          last_moisture:71,last_measured:'2026-06-11T08:25:00',last_watered:'2026-06-10T20:00:00'},
         {pot_code:'POT_05',plant_id:13,custom_name:'Strawberry Trial',current_stage:'vegetative',
          stage_start_date:'2026-03-03',location:'Balcony Left 2',sow_date:'2026-02-01',
+         rfid_uid:'04555666'
          last_moisture:38,last_measured:'2026-06-11T08:30:00',last_watered:'2026-06-09T18:40:00'},
       ];
       setPots(testPots);lsSet('gb_pots_v2',testPots);
